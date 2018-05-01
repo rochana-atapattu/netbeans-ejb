@@ -5,11 +5,17 @@
  */
 package ejb;
 
+import javax.annotation.Resource;
 import javax.ejb.ActivationConfigProperty;
 import javax.ejb.MessageDriven;
+import javax.ejb.MessageDrivenContext;
 import javax.jms.JMSDestinationDefinition;
+import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageListener;
+import javax.jms.ObjectMessage;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 
 /**
  *
@@ -23,11 +29,36 @@ import javax.jms.MessageListener;
 })
 public class NewMessage implements MessageListener {
     
+    @Resource
+    private MessageDrivenContext mdc;
+    
+    @PersistenceContext(unitName = "NewApp-ejbPU")
+    private EntityManager em;
+    
     public NewMessage() {
     }
     
     @Override
     public void onMessage(Message message) {
+        ObjectMessage msg = null;
+        try{
+            if(message instanceof ObjectMessage){
+                msg=(ObjectMessage) message;
+                NewEntity e=(NewEntity) msg.getObject();
+                save (e);
+            }
+        }
+        catch(JMSException e){
+            e.printStackTrace();
+            mdc.setRollbackOnly();
+        }
+        catch(Throwable e){
+            e.printStackTrace();
+        }
+    }
+
+    public void save(Object object) {
+        em.persist(object);
     }
     
-}
+}   
